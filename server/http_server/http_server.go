@@ -1,0 +1,133 @@
+package http_server
+
+import (
+	"context"
+	"core/log"
+	"github.com/goccy/go-json"
+	"github.com/gofiber/fiber/v2"
+	"sync"
+
+	"net"
+
+	"go.uber.org/zap"
+)
+
+type HttpServer struct {
+	options *HttpOption
+
+	ln net.Listener
+
+	app *fiber.App
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	wg sync.WaitGroup
+}
+
+func NewHttpServer() *HttpServer {
+	app := fiber.New(fiber.Config{
+		JSONEncoder: json.Marshal,
+		JSONDecoder: json.Unmarshal,
+
+		DisableStartupMessage: true,
+		// Prefork:               true,
+		// ErrorHandler: config.ErrorHandler,
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			// nothing to do
+			return nil
+		},
+	})
+
+	s := &HttpServer{
+		options: NewHttpOption(),
+		app:     app,
+	}
+
+	return s
+}
+
+func (s *HttpServer) Init(ctx context.Context, opts ...any) (err error) {
+	s.ctx, s.cancel = context.WithCancel(ctx)
+
+	if len(opts) > 0 {
+		for _, opt := range opts {
+			opt.(Option)(s.options)
+		}
+	}
+
+	s.ln, err = net.Listen("tcp", s.options.listenAddr)
+	if err != nil {
+		log.Error("net listen err", zap.Error(err))
+		return
+	}
+
+	return nil
+}
+
+func (s *HttpServer) GetApp() *fiber.App {
+	return s.app
+}
+
+func (s *HttpServer) Start() {
+	s.wg.Add(1)
+
+	go func() {
+		err := s.app.Listener(s.ln)
+		if err != nil {
+			log.Info("httpserver stopped", zap.Error(err))
+		} else {
+			log.Info("httpserver stopped")
+		}
+
+		s.wg.Done()
+	}()
+
+	return
+}
+
+func (s *HttpServer) Stop() {}
+
+func (s *HttpServer) Wait() error {
+	s.wg.Wait()
+
+	return nil
+}
+
+func (s *HttpServer) Post(path string, fn ResponseHandlerFn) {
+	s.app.Post(path, NewResponseHandlerFn(fn))
+}
+
+func (s *HttpServer) Get(path string, fn ResponseHandlerFn) {
+	s.app.Get(path, NewResponseHandlerFn(fn))
+}
+
+func (s *HttpServer) PostOrigin(path string, fn OriginHandlerFn) {
+	s.app.Post(path, NewOriginHandlerFn(fn))
+}
+
+func (s *HttpServer) GetOrigin(path string, fn OriginHandlerFn) {
+	s.app.Get(path, NewOriginHandlerFn(fn))
+}
+
+func (s *HttpServer) Use(fn OriginHandlerFn) {
+	s.app.Use(NewOriginHandlerFn(fn))
+}
+
+// Use registers a middleware route that will match requests
+// with the provided prefix (which is optional and defaults to "/").
+//
+//	app.Use(func(c *fiber.Ctx) error {
+//	     return c.Next()
+//	})
+//	app.Use("/api", func(c *fiber.Ctx) error {
+//	     return c.Next()
+//	})
+//	app.Use("/api", handler, func(c *fiber.Ctx) error {
+//	     return c.Next()
+//	})
+//
+// This method will match all HTTP verbs: GET, POST, PUT, HEAD etc...
+func (s *HttpServer) UseOrigin(args ...interface{}) {
+	s.app.Use(args...)
+}
