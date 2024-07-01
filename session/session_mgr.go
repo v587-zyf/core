@@ -87,3 +87,12 @@ func (s *SessionMgr) Range(fn func(SID uint64, SS iface.ISession)) {
 		fn(SID, SS)
 	}
 }
+
+func (s *SessionMgr) Close() {
+	s.onlineMux.RLock()
+	defer s.onlineMux.RUnlock()
+
+	for _, SS := range s.online {
+		SS.Close()
+	}
+}
