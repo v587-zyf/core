@@ -39,12 +39,6 @@ func (t *TableDb) Patch() {}
 func (t *TableDb) Load(tdb iface.ITableDb) error {
 	iTdb = tdb
 
-	for _, info := range t.FileInfos {
-		for _, i := range info.SheetInfos {
-			gob.Register(i.ObjPropType)
-		}
-	}
-
 	f, err := os.Stat(t.TableDbPath)
 	if err != nil {
 		return err

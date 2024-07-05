@@ -7,6 +7,7 @@ import (
 	"path"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 func LoadConf(fileName string, rawVal interface{}) error {
@@ -39,7 +40,7 @@ func Load(configVal interface{}, fileName ...string) error {
 		configFileName = fileName[0]
 	}
 	if configFileName == "" {
-		configFileName = "./conf/config.yml"
+		configFileName = getDefaultFileName()
 	}
 
 	// load from config file
@@ -104,4 +105,18 @@ func Load(configVal interface{}, fileName ...string) error {
 	}
 
 	return nil
+}
+
+func getDefaultFileName() string {
+	configFileName := "./conf/config.yml"
+	mode := os.Getenv("MODE")
+	if mode != "" {
+		idx := strings.LastIndex(configFileName, ".")
+		if idx < 0 {
+			return ""
+		}
+		configFileName = strings.Join([]string{configFileName[:idx+1], mode, configFileName[idx:]}, "")
+	}
+
+	return configFileName
 }

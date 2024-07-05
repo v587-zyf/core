@@ -1,4 +1,4 @@
-package session
+package tpc_session
 
 import (
 	"core/iface"
@@ -12,7 +12,7 @@ func init() {
 }
 
 type SessionMgr struct {
-	online    map[uint64]iface.ISession
+	online    map[uint64]iface.ITcpSession
 	onlineMux sync.RWMutex
 }
 
@@ -22,7 +22,7 @@ func GetSessionMgr() *SessionMgr {
 
 func NewSessionMgr() *SessionMgr {
 	s := &SessionMgr{
-		online: make(map[uint64]iface.ISession),
+		online: make(map[uint64]iface.ITcpSession),
 	}
 
 	return s
@@ -35,7 +35,7 @@ func (s *SessionMgr) Length() int {
 	return len(s.online)
 }
 
-func (s *SessionMgr) GetOne(UID uint64) iface.ISession {
+func (s *SessionMgr) GetOne(UID uint64) iface.ITcpSession {
 	s.onlineMux.RLock()
 	c, ok := s.online[UID]
 	s.onlineMux.RUnlock()
@@ -55,7 +55,7 @@ func (s *SessionMgr) IsOnline(UID uint64) bool {
 	return ok
 }
 
-func (s *SessionMgr) Add(ss iface.ISession) {
+func (s *SessionMgr) Add(ss iface.ITcpSession) {
 	s.onlineMux.Lock()
 	defer s.onlineMux.Unlock()
 
@@ -69,7 +69,7 @@ func (s *SessionMgr) Disconnect(SID uint64) {
 	s.onlineMux.Unlock()
 }
 
-func (s *SessionMgr) Once(UID uint64, fn func(mgr iface.ISession)) {
+func (s *SessionMgr) Once(UID uint64, fn func(SS iface.ITcpSession)) {
 	cli := s.GetOne(UID)
 	if cli == nil {
 		fn(nil)
@@ -79,7 +79,7 @@ func (s *SessionMgr) Once(UID uint64, fn func(mgr iface.ISession)) {
 	fn(cli)
 }
 
-func (s *SessionMgr) Range(fn func(SID uint64, SS iface.ISession)) {
+func (s *SessionMgr) Range(fn func(SID uint64, SS iface.ITcpSession)) {
 	s.onlineMux.RLock()
 	defer s.onlineMux.RUnlock()
 

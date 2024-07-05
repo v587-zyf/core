@@ -2,27 +2,8 @@ package workerpool
 
 import (
 	"core/iface"
-	"core/session"
 	"time"
 )
-
-func (p *WorkerPool) AssignNetTask(fn session.Recv, ss iface.ISession, data any) error {
-	return Assign(&NetTask{
-		Func:    fn,
-		Session: ss,
-		Data:    data,
-	})
-}
-
-type NetTask struct {
-	Func    session.Recv
-	Session iface.ISession
-	Data    any
-}
-
-func (t *NetTask) Do() {
-	t.Func(t.Session, t.Data)
-}
 
 type DelaySendTask struct {
 	Delay  time.Duration

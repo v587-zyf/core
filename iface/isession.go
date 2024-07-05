@@ -2,10 +2,11 @@ package iface
 
 import (
 	"context"
+	"github.com/gorilla/websocket"
 	"net"
 )
 
-type ISession interface {
+type ITcpSession interface {
 	Set(key string, value any)
 	Get(key string) (any, bool)
 	Remove(key string)
@@ -22,20 +23,42 @@ type ISession interface {
 	Send(msgID uint16, tag uint32, userID uint64, msg IProtoMessage) error
 }
 
-type ISessionMgr interface {
-	Length() int
-	GetOne(UID uint64) ISession
-	IsOnline(UID uint64) bool
+type IWsSession interface {
+	Set(key string, value any)
+	Get(key string) (any, bool)
+	Remove(key string)
 
-	Add(ss ISession)
-	Disconnect(SID uint64)
+	GetID() uint64
+	SetID(id uint64)
 
-	Once(UID uint64, fn func(mgr ISession))
-	Range(fn func(uint64, ISession))
+	Start()
+	Close() error
+
+	GetConn() *websocket.Conn
+	GetCtx() context.Context
+
+	Send(msgID uint16, tag uint32, userID uint64, msg IProtoMessage) error
 }
 
-type ISessionMethod interface {
-	Start(ss ISession)
-	Recv(conn ISession, data any)
-	Stop(ss ISession)
+type ITcpSessionMgr interface {
+	Length() int
+	GetOne(UID uint64) ITcpSession
+	IsOnline(UID uint64) bool
+
+	Add(ss ITcpSession)
+	Disconnect(SID uint64)
+
+	Once(UID uint64, fn func(mgr ITcpSession))
+	Range(fn func(uint64, ITcpSession))
+}
+
+type ITpcSessionMethod interface {
+	Start(ss ITcpSession)
+	Recv(conn ITcpSession, data any)
+	Stop(ss ITcpSession)
+}
+type IWsSessionMethod interface {
+	Start(ss IWsSession)
+	Recv(conn IWsSession, data any)
+	Stop(ss IWsSession)
 }

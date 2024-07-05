@@ -3,8 +3,7 @@ package tcp_server
 import (
 	"context"
 	"core/log"
-	"core/session"
-	"core/utils"
+	"core/session/tpc_session"
 	"go.uber.org/zap"
 	"net"
 	"sync"
@@ -17,8 +16,6 @@ type TcpServer struct {
 	cancel context.CancelFunc
 
 	listener net.Listener
-
-	snowflake *utils.Snowflake
 
 	wg sync.WaitGroup
 }
@@ -44,12 +41,6 @@ func (s *TcpServer) Init(ctx context.Context, option ...any) (err error) {
 		return
 	}
 
-	s.snowflake, err = utils.NewSnowflake(s.options.sid)
-	if err != nil {
-		log.Error("new snowflake error", zap.Error(err))
-		return
-	}
-
 	return nil
 }
 
@@ -67,7 +58,7 @@ func (s *TcpServer) Start() {
 				log.Error("tcp listen err", zap.Error(err))
 				break LOOP
 			}
-			ss := session.NewSession(context.Background(), c)
+			ss := tpc_session.NewSession(context.Background(), c)
 			ss.Hooks().OnMethod(s.options.method)
 			ss.Start()
 		}

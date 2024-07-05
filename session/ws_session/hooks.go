@@ -1,4 +1,4 @@
-package session
+package ws_session
 
 import (
 	"core/iface"
@@ -42,7 +42,7 @@ func (h *Hooks) OnStop(fns ...Call) {
 	h.onStopFns = append(h.onStopFns, fns...)
 }
 
-func (h *Hooks) OnMethod(method iface.ISessionMethod) {
+func (h *Hooks) OnMethod(method iface.IWsSessionMethod) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -60,19 +60,19 @@ func (h *Hooks) OnHooks(hooks *Hooks) {
 	h.onStopFns = append(h.onStopFns, hooks.onStopFns...)
 }
 
-func (h *Hooks) ExecuteStart(ss iface.ISession) {
+func (h *Hooks) ExecuteStart(ss iface.IWsSession) {
 	for _, v := range h.onStartFns {
 		v(ss)
 	}
 }
 
-func (h *Hooks) ExecuteRecv(ss iface.ISession, data []byte) {
+func (h *Hooks) ExecuteRecv(ss iface.IWsSession, data []byte) {
 	for _, v := range h.onRecvFns {
 		v(ss, data)
 	}
 }
 
-func (h *Hooks) ExecuteStop(ss iface.ISession) {
+func (h *Hooks) ExecuteStop(ss iface.IWsSession) {
 	for _, v := range h.onStopFns {
 		v(ss)
 	}

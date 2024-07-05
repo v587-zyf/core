@@ -1,7 +1,6 @@
-package session
+package ws_session
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"core/enums"
@@ -9,8 +8,8 @@ import (
 	"core/iface"
 	"core/log"
 	"encoding/binary"
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
-	"net"
 	"runtime"
 	"sync"
 	"time"
@@ -18,7 +17,7 @@ import (
 
 type Session struct {
 	id   uint64
-	conn net.Conn
+	conn *websocket.Conn
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -31,12 +30,12 @@ type Session struct {
 
 	hooks *Hooks
 
-	method iface.ISessionMethod
+	method iface.ITpcSessionMethod
 
 	once sync.Once
 }
 
-func NewSession(ctx context.Context, conn net.Conn) *Session {
+func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &Session{
 		ctx:    ctx,
@@ -113,7 +112,7 @@ func (s *Session) Close() error {
 	return nil
 }
 
-func (s *Session) GetConn() net.Conn {
+func (s *Session) GetConn() *websocket.Conn {
 	return s.conn
 }
 
@@ -122,8 +121,7 @@ func (s *Session) GetCtx() context.Context {
 }
 
 func (s *Session) Send(msgID uint16, tag uint32, userID uint64, msg iface.IProtoMessage) error {
-	log.Debug("2---------------------", zap.Any("msg", msg),
-		zap.Uint16("msgID", msgID))
+	//log.Debug("2---------------------", zap.Any("msg", msg), zap.Uint16("msgID", msgID))
 	buf := new(bytes.Buffer)
 
 	binary.Write(buf, binary.BigEndian, uint32(msg.Size()))
@@ -140,8 +138,7 @@ func (s *Session) Send(msgID uint16, tag uint32, userID uint64, msg iface.IProto
 		log.Error("msg marshal err", zap.Uint64("userID", userID), zap.Any("msg", msg))
 		return err
 	}
-	log.Debug("3---------------------", zap.Any("msg", msg),
-		zap.Uint16("msgID", msgID), zap.ByteString("data", data))
+	//log.Debug("3---------------------", zap.Any("msg", msg), zap.Uint16("msgID", msgID), zap.ByteString("data", data))
 
 	buf.Write(data)
 
@@ -173,21 +170,21 @@ func (s *Session) readPump() {
 
 	s.hooks.ExecuteStart(s)
 
-	scanner := bufio.NewScanner(s.conn)
-	scanner.Buffer(make([]byte, enums.READ_BUFF_SIZE_INIT), enums.READ_BUFF_SIZE_MAX)
-	scanner.Split(s.split)
 LOOP:
 	for {
-		ok := scanner.Scan()
-		if !ok {
-			log.Error("ws_server read err", zap.Error(scanner.Err()))
+		_, message, err := s.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway,
+				websocket.CloseNoStatusReceived,
+				websocket.CloseAbnormalClosure) {
+				log.Info("ws_server read err", zap.Error(err))
+			}
 			break LOOP
 		}
-
-		data := scanner.Bytes()
-		if data != nil {
-			dataCopy := make([]byte, len(data))
-			copy(dataCopy, data)
+		if message != nil && len(message) > 0 {
+			dataCopy := make([]byte, len(message))
+			copy(dataCopy, message)
 			s.inChan <- dataCopy
 		}
 	}
@@ -248,7 +245,7 @@ LOOP:
 		case data := <-s.outChan:
 			s.conn.SetWriteDeadline(time.Now().Add(enums.CONN_WRITE_WAIT_TIME))
 
-			_, err := s.conn.Write(data)
+			err := s.conn.WriteMessage(websocket.BinaryMessage, data)
 			if err != nil {
 				msgID := binary.BigEndian.Uint16(data[0:2])
 				log.Warn("conn write err", zap.Uint64("userID", s.id),
