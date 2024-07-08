@@ -2,7 +2,9 @@ package rdb_cluster
 
 import (
 	"context"
+	"core/log"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -43,6 +45,7 @@ func (r *RedisCluster) Init(ctx context.Context, opts ...any) (err error) {
 	})
 
 	if err = r.client.Ping(r.ctx).Err(); err != nil {
+		log.Error("redis cluster ping err", zap.Error(err))
 		return
 	}
 

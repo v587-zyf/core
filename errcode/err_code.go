@@ -55,6 +55,10 @@ var (
 
 	// redis
 	ERR_REDIS_UPDATE_USER = CreateErrCode(401, "redis更新玩家数据错误")
+	ERR_REDIS_DATA_NIL    = CreateErrCode(402, "redis数据为空")
+
+	// server
+	ERR_SERVER_GATE_NIL = CreateErrCode(501, "Gate服务器为空")
 
 	// mongodb
 	ERR_MONGO_UPSERT     = CreateErrCode(701, "upsert错误")

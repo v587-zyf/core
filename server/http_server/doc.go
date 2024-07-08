@@ -3,6 +3,7 @@ package http_server
 import (
 	"core/errcode"
 	"core/log"
+	"errors"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"runtime"
@@ -20,7 +21,7 @@ type Response struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
-type ResponseHandlerFn func(*Ctx) (interface{}, error)
+type ResponseHandlerFn func(*Ctx) (any, error)
 
 type OriginHandlerFn func(*Ctx) error
 
@@ -59,7 +60,7 @@ func SendError(c *fiber.Ctx, err error) error {
 	return nil
 }
 
-func SendResponse(c *fiber.Ctx, data interface{}) error {
+func SendResponse(c *fiber.Ctx, data any) error {
 	resp := Response{
 		Code: errcode.ERR_SUCCEED.Int(),
 		Msg:  "ok",
@@ -101,7 +102,8 @@ func NewResponseHandlerFn(fn ResponseHandlerFn) func(c *fiber.Ctx) error {
 		ctx := &Ctx{Ctx: c}
 		resp, err := fn(ctx)
 		if err != nil {
-			if errCode, ok := err.(errcode.ErrCode); ok && errCode != errcode.ERR_SUCCEED {
+			var errCode errcode.ErrCode
+			if errors.As(err, &errCode) && !errors.Is(errCode, errcode.ERR_SUCCEED) {
 				return err
 			}
 		}
