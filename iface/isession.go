@@ -38,6 +38,10 @@ type IWsSession interface {
 	GetCtx() context.Context
 
 	Send(msgID uint16, tag uint32, userID uint64, msg IProtoMessage) error
+	Send2User(msgID uint16, msg IProtoMessage) error
+
+	GetReconnectTimes() int
+	AddReconnectTimes()
 }
 
 type ITcpSessionMgr interface {

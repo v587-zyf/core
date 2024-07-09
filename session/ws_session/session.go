@@ -2,6 +2,7 @@ package ws_session
 
 import (
 	"bytes"
+	pb "comm/proto/out/client"
 	"context"
 	"core/enums"
 	"core/errcode"
@@ -32,6 +33,10 @@ type Session struct {
 
 	method iface.ITpcSessionMethod
 
+	close bool
+
+	reconnectTimes int
+
 	once sync.Once
 }
 
@@ -54,17 +59,15 @@ func NewSession(ctx context.Context, conn *websocket.Conn) *Session {
 }
 
 func (s *Session) Start() {
-	go func() {
-		s.readPump()
-	}()
-
-	go func() {
-		s.parsePump()
-	}()
-
-	go func() {
-		s.writePump()
-	}()
+	go s.readPump()
+	go s.IOPump()
+	//go func() {
+	//	s.parsePump()
+	//}()
+	//
+	//go func() {
+	//	s.writePump()
+	//}()
 }
 
 func (s *Session) Hooks() *Hooks {
@@ -105,6 +108,7 @@ func (s *Session) Close() error {
 	// return s.Conn.Close()
 	//log.Info("session close", zap.Int32("sessID", s.GetID()))
 	s.once.Do(func() {
+		s.close = true
 		s.cancel()
 		s.conn.Close()
 	})
@@ -148,6 +152,66 @@ func (s *Session) Send(msgID uint16, tag uint32, userID uint64, msg iface.IProto
 	default:
 		return errcode.ERR_NET_SEND_TIMEOUT
 	}
+}
+
+func (s *Session) Send2User(msgID uint16, msg iface.IProtoMessage) error {
+	return s.Send(msgID, 0, s.GetID(), msg)
+}
+
+func (s *Session) GetReconnectTimes() int {
+	return s.reconnectTimes
+}
+func (s *Session) AddReconnectTimes() {
+	s.reconnectTimes++
+}
+
+func (s *Session) IOPump() {
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 1<<10)
+			runtime.Stack(buf, true)
+			if err, ok := r.(error); ok {
+				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+					zap.String("err", err.Error()), zap.ByteString("core", buf))
+			} else if err, ok := r.(string); ok {
+				log.Error("core dump", zap.Uint64("ssID", s.GetID()),
+					zap.String("err", err), zap.ByteString("core", buf))
+			} else {
+				log.Error("core dump", zap.Uint64("ssID", s.GetID()),
+					zap.Reflect("err", err), zap.ByteString("core", buf))
+			}
+		}
+	}()
+
+	heartbeatTicker := time.NewTicker(enums.HEARTBEAT_INTERVAL)
+	defer heartbeatTicker.Stop()
+
+LOOP:
+	for {
+		select {
+		case data := <-s.inChan:
+			s.hooks.ExecuteRecv(s, data)
+		case data := <-s.outChan:
+			s.conn.SetWriteDeadline(time.Now().Add(enums.CONN_WRITE_WAIT_TIME))
+
+			err := s.conn.WriteMessage(websocket.BinaryMessage, data)
+			if err != nil {
+				msgID := binary.BigEndian.Uint16(data[0:2])
+				log.Warn("conn write err", zap.Uint64("userID", s.id),
+					zap.Uint16("msgID", msgID), zap.Int("len", len(data)), zap.Error(err))
+				break LOOP
+			}
+		case <-heartbeatTicker.C:
+			msg := new(pb.Heartbeat)
+			s.Send2User(pb.MsgID_HeartbeatId, msg)
+		case <-s.ctx.Done():
+			break LOOP
+		}
+	}
+
+	s.hooks.ExecuteStop(s)
+
+	s.Close()
 }
 
 func (s *Session) readPump() {

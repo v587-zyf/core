@@ -1,8 +1,11 @@
 package utils
 
 import (
+	"core/log"
 	"crypto/hmac"
 	"crypto/sha256"
+	"encoding/hex"
+	"go.uber.org/zap"
 	"net/url"
 	"sort"
 	"strings"
@@ -59,4 +62,24 @@ func TgGetHmacSha256(key, data []byte) []byte {
 	//fmt.Println(base64.StdEncoding.EncodeToString(hash))
 	//return hex.EncodeToString(hash)
 	return hash
+}
+
+func TgCheck(initData, loginToken string) (tgDate url.Values, res bool) {
+	tgDate, err := TgParseData(initData)
+	if err != nil {
+		log.Error("utils.TgParseData", zap.Error(err), zap.String("initData", initData))
+		return
+	}
+	dataCheckString := TgGetCheckData(tgDate)
+	botTokenData := "WebAppData"
+	secret := TgGetHmacSha256([]byte(botTokenData), []byte(loginToken))
+	hash := hex.EncodeToString(TgGetHmacSha256([]byte(secret), []byte(dataCheckString)))
+	if hash != tgDate.Get("hash") {
+		log.Error("hash not true", zap.String("makeHash", hash), zap.String("hash", tgDate.Get("hash")))
+		return
+	}
+
+	res = true
+
+	return
 }

@@ -12,10 +12,14 @@ var (
 	//ERR_STANDARD_ERR = CreateErrCode(1, "标准错误")
 	//ERR_SIGN         = CreateErrCode(2, "验证未通过")
 	//ERR_GATE_NIL     = CreateErrCode(3, "网关数据获取失败")
-	ERR_SUCCEED      = CreateErrCode(1000, "成功")
-	ERR_STANDARD_ERR = CreateErrCode(1001, "失败")
-	ERR_SIGN         = CreateErrCode(1002, "验证未通过")
-	ERR_PARAM        = CreateErrCode(1003, "参数错误")
+	ERR_SUCCEED           = CreateErrCode(1000, "成功")
+	ERR_STANDARD_ERR      = CreateErrCode(1001, "失败")
+	ERR_SIGN              = CreateErrCode(1002, "验证未通过")
+	ERR_PARAM             = CreateErrCode(1003, "参数错误")
+	ERR_RECONNECT_MAX     = CreateErrCode(1004, "重连已达最大次数")
+	ERR_KICK_OUT          = CreateErrCode(1005, "被踢出")
+	ERR_SQUEEZE           = CreateErrCode(1006, "该账号在别处登录")
+	ERR_RECONNECT_TIMEOUT = CreateErrCode(1007, "重连超时数")
 
 	// net
 	ERR_NET_BODY_LEN_INVALID = CreateErrCode(11, "数据格式错误")
@@ -54,8 +58,9 @@ var (
 	ERR_HTTP_REQUEST_ERR = CreateErrCode(303, "http请求错误")
 
 	// redis
-	ERR_REDIS_UPDATE_USER = CreateErrCode(401, "redis更新玩家数据错误")
-	ERR_REDIS_DATA_NIL    = CreateErrCode(402, "redis数据为空")
+	ERR_REDIS_UPDATE_USER    = CreateErrCode(401, "redis更新玩家数据错误")
+	ERR_REDIS_DATA_NIL       = CreateErrCode(402, "redis数据为空")
+	ERR_REDIS_LOGIN_DATA_NIL = CreateErrCode(403, "redis登陆数据数据为空")
 
 	// server
 	ERR_SERVER_GATE_NIL = CreateErrCode(501, "Gate服务器为空")
@@ -91,6 +96,9 @@ func (code ErrCode) Error() string {
 
 func (code ErrCode) Int() int {
 	return int(code)
+}
+func (code ErrCode) Int32() int32 {
+	return int32(code)
 }
 
 var defaultErrs map[ErrCode]string = map[ErrCode]string{}

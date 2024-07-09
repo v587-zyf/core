@@ -79,7 +79,7 @@ func (s *WsServer) wsHandle(w http.ResponseWriter, r *http.Request) {
 	// todo 这里有递归引用 需要解决
 	// 2.连接后 s或c端都可收发消息
 	ss := ws_session.NewSession(context.Background(), wsConn)
-	ws_session.GetSessionMgr().Add(ss)
+	//ws_session.GetSessionMgr().Add(ss)
 	ss.Hooks().OnMethod(s.options.method)
 	ss.Start()
 }

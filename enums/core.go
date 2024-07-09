@@ -14,4 +14,6 @@ const (
 	MSG_MAX_PACKET_SIZE = 65535 * 5
 
 	CONN_WRITE_WAIT_TIME = 10 * time.Second
+
+	HEARTBEAT_INTERVAL = 10 * time.Second
 )
