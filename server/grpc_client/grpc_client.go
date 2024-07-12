@@ -3,6 +3,7 @@ package grpc_client
 import (
 	"context"
 	"core/log"
+	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -33,7 +34,8 @@ func (s *GrpcClient) Init(ctx context.Context, option ...any) (err error) {
 	}
 
 	credentials := grpc.WithTransportCredentials(insecure.NewCredentials())
-	s.client, err = grpc.NewClient(s.options.listenAddr, credentials)
+	linkAddr := fmt.Sprintf("passthrough:%s", s.options.listenAddr)
+	s.client, err = grpc.NewClient(linkAddr, credentials)
 	if err != nil {
 		log.Error("grpc dial err", zap.Error(err))
 		return

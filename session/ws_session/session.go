@@ -33,8 +33,6 @@ type Session struct {
 
 	method iface.ITpcSessionMethod
 
-	close bool
-
 	reconnectTimes int
 
 	once sync.Once
@@ -108,7 +106,6 @@ func (s *Session) Close() error {
 	// return s.Conn.Close()
 	//log.Info("session close", zap.Int32("sessID", s.GetID()))
 	s.once.Do(func() {
-		s.close = true
 		s.cancel()
 		s.conn.Close()
 	})
@@ -247,6 +244,7 @@ LOOP:
 			break LOOP
 		}
 		if message != nil && len(message) > 0 {
+			//log.Debug("1------------------recv msg")
 			dataCopy := make([]byte, len(message))
 			copy(dataCopy, message)
 			s.inChan <- dataCopy
@@ -256,95 +254,95 @@ LOOP:
 	s.cancel()
 }
 
-func (s *Session) parsePump() {
-	defer func() {
-		if r := recover(); r != nil {
-			buf := make([]byte, 1<<10)
-			runtime.Stack(buf, true)
-			if err, ok := r.(error); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err.Error()), zap.ByteString("core", buf))
-			} else if err, ok := r.(string); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err), zap.ByteString("core", buf))
-			} else {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.Reflect("err", err), zap.ByteString("core", buf))
-			}
-		}
-	}()
-
-LOOP:
-	for {
-		select {
-		case data := <-s.inChan:
-			s.hooks.ExecuteRecv(s, data)
-		case <-s.ctx.Done():
-			break LOOP
-		}
-	}
-}
-
-func (s *Session) writePump() {
-	defer func() {
-		if r := recover(); r != nil {
-			buf := make([]byte, 1<<10)
-			runtime.Stack(buf, true)
-			if err, ok := r.(error); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err.Error()), zap.ByteString("core", buf))
-			} else if err, ok := r.(string); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err), zap.ByteString("core", buf))
-			} else {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.Reflect("err", err), zap.ByteString("core", buf))
-			}
-		}
-	}()
-
-LOOP:
-	for {
-		select {
-		case data := <-s.outChan:
-			s.conn.SetWriteDeadline(time.Now().Add(enums.CONN_WRITE_WAIT_TIME))
-
-			err := s.conn.WriteMessage(websocket.BinaryMessage, data)
-			if err != nil {
-				msgID := binary.BigEndian.Uint16(data[0:2])
-				log.Warn("conn write err", zap.Uint64("userID", s.id),
-					zap.Uint16("msgID", msgID), zap.Int("len", len(data)), zap.Error(err))
-				break LOOP
-			}
-		case <-s.ctx.Done():
-			break LOOP
-		}
-	}
-
-	s.conn.Close()
-	s.cancel()
-
-	s.hooks.ExecuteStop(s)
-}
-
-func (s *Session) split(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	dataLen := len(data)
-	if dataLen < enums.MSG_HEADER_SIZE {
-		return 0, nil, nil
-	}
-
-	// body len
-	n := int(binary.BigEndian.Uint32(data[0:4]))
-	if n > enums.MSG_MAX_PACKET_SIZE-enums.MSG_HEADER_SIZE || n < 0 {
-		log.Error("body len invalid", zap.Uint64("sessID", s.id),
-			zap.Int("n", n), zap.String("addr", s.GetConn().RemoteAddr().String()))
-		return 0, nil, errcode.ERR_NET_BODY_LEN_INVALID
-	}
-	if dataLen < n+enums.MSG_HEADER_SIZE {
-		return 0, nil, nil
-	}
-	return n + enums.MSG_HEADER_SIZE, data[0 : n+enums.MSG_HEADER_SIZE], nil
-}
+//func (s *Session) parsePump() {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			buf := make([]byte, 1<<10)
+//			runtime.Stack(buf, true)
+//			if err, ok := r.(error); ok {
+//				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+//					zap.String("err", err.Error()), zap.ByteString("core", buf))
+//			} else if err, ok := r.(string); ok {
+//				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+//					zap.String("err", err), zap.ByteString("core", buf))
+//			} else {
+//				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+//					zap.Reflect("err", err), zap.ByteString("core", buf))
+//			}
+//		}
+//	}()
+//
+//LOOP:
+//	for {
+//		select {
+//		case data := <-s.inChan:
+//			s.hooks.ExecuteRecv(s, data)
+//		case <-s.ctx.Done():
+//			break LOOP
+//		}
+//	}
+//}
+//
+//func (s *Session) writePump() {
+//	defer func() {
+//		if r := recover(); r != nil {
+//			buf := make([]byte, 1<<10)
+//			runtime.Stack(buf, true)
+//			if err, ok := r.(error); ok {
+//				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+//					zap.String("err", err.Error()), zap.ByteString("core", buf))
+//			} else if err, ok := r.(string); ok {
+//				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+//					zap.String("err", err), zap.ByteString("core", buf))
+//			} else {
+//				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+//					zap.Reflect("err", err), zap.ByteString("core", buf))
+//			}
+//		}
+//	}()
+//
+//LOOP:
+//	for {
+//		select {
+//		case data := <-s.outChan:
+//			s.conn.SetWriteDeadline(time.Now().Add(enums.CONN_WRITE_WAIT_TIME))
+//
+//			err := s.conn.WriteMessage(websocket.BinaryMessage, data)
+//			if err != nil {
+//				msgID := binary.BigEndian.Uint16(data[0:2])
+//				log.Warn("conn write err", zap.Uint64("userID", s.id),
+//					zap.Uint16("msgID", msgID), zap.Int("len", len(data)), zap.Error(err))
+//				break LOOP
+//			}
+//		case <-s.ctx.Done():
+//			break LOOP
+//		}
+//	}
+//
+//	s.conn.Close()
+//	s.cancel()
+//
+//	s.hooks.ExecuteStop(s)
+//}
+//
+//func (s *Session) split(data []byte, atEOF bool) (advance int, token []byte, err error) {
+//	if atEOF && len(data) == 0 {
+//		return 0, nil, nil
+//	}
+//	dataLen := len(data)
+//	if dataLen < enums.MSG_HEADER_SIZE {
+//		return 0, nil, nil
+//	}
+//
+//	// body len
+//	n := int(binary.BigEndian.Uint32(data[0:4]))
+//	if n > enums.MSG_MAX_PACKET_SIZE-enums.MSG_HEADER_SIZE || n < 0 {
+//		log.Error("body len invalid", zap.Uint64("sessID", s.id),
+//			zap.Int("n", n), zap.String("addr", s.GetConn().RemoteAddr().String()))
+//		return 0, nil, errcode.ERR_NET_BODY_LEN_INVALID
+//	}
+//	if dataLen < n+enums.MSG_HEADER_SIZE {
+//		return 0, nil, nil
+//	}
+//	return n + enums.MSG_HEADER_SIZE, data[0 : n+enums.MSG_HEADER_SIZE], nil
+//}

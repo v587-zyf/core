@@ -15,23 +15,23 @@ import (
 	"reflect"
 )
 
-type clientWsHandlerUnit struct {
+type ClientWsHandlerUnit struct {
 	msgID   uint16          // 协议id
 	handler ws_session.Recv // 协议具体方法
 }
 
 type ClientWsHandler struct {
-	handlers map[uint16]*clientWsHandlerUnit
+	handlers map[uint16]*ClientWsHandlerUnit
 }
 
-var cWHandler = &ClientWsHandler{handlers: make(map[uint16]*clientWsHandlerUnit)}
+var cWHandler = &ClientWsHandler{handlers: make(map[uint16]*ClientWsHandlerUnit)}
 
 func GetClientWsHandler() *ClientWsHandler {
 	return cWHandler
 }
 
 func (h *ClientWsHandler) Register(msgID uint16, handler ws_session.Recv) {
-	h.handlers[msgID] = &clientWsHandlerUnit{
+	h.handlers[msgID] = &ClientWsHandlerUnit{
 		msgID:   msgID,
 		handler: handler,
 	}

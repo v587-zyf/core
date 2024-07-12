@@ -14,23 +14,23 @@ import (
 	"reflect"
 )
 
-type clientTcpHandlerUnit struct {
+type ClientTcpHandlerUnit struct {
 	msgID   uint16           // 协议id
 	handler tpc_session.Recv // 协议具体方法
 }
 
 type ClientTcpHandler struct {
-	handlers map[uint16]*clientTcpHandlerUnit
+	handlers map[uint16]*ClientTcpHandlerUnit
 }
 
-var cTHandler = &ClientTcpHandler{handlers: make(map[uint16]*clientTcpHandlerUnit)}
+var cTHandler = &ClientTcpHandler{handlers: make(map[uint16]*ClientTcpHandlerUnit)}
 
 func GetClientTcpHandler() *ClientTcpHandler {
 	return cTHandler
 }
 
 func (h *ClientTcpHandler) Register(msgID uint16, handler tpc_session.Recv) {
-	h.handlers[msgID] = &clientTcpHandlerUnit{
+	h.handlers[msgID] = &ClientTcpHandlerUnit{
 		msgID:   msgID,
 		handler: handler,
 	}

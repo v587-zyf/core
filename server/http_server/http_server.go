@@ -3,6 +3,7 @@ package http_server
 import (
 	"context"
 	"core/log"
+	"crypto/tls"
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"sync"
@@ -56,10 +57,43 @@ func (s *HttpServer) Init(ctx context.Context, opts ...any) (err error) {
 		}
 	}
 
+	if s.options.isHttps {
+		err = s.InitHttps()
+	} else {
+		err = s.InitHttp()
+	}
+
+	return nil
+}
+
+func (s *HttpServer) InitHttp() (err error) {
 	s.ln, err = net.Listen("tcp", s.options.listenAddr)
 	if err != nil {
 		log.Error("net listen err", zap.Error(err))
 		return
+	}
+
+	return nil
+}
+func (s *HttpServer) InitHttps() error {
+	// 加载证书和私钥
+	cert, err := tls.LoadX509KeyPair(s.options.pem, s.options.key)
+	if err != nil {
+		log.Error("load https cert err", zap.Error(err))
+		return err
+	}
+
+	// 配置TLS
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+
+	// 创建一个TCP监听器
+	//s.ln, err = tls.Listen("tcp", ":443", tlsConfig)
+	s.ln, err = tls.Listen("tcp", s.options.listenAddr, tlsConfig)
+	if err != nil {
+		log.Error("net listen err", zap.Error(err))
+		return err
 	}
 
 	return nil

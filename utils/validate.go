@@ -19,10 +19,13 @@ func ValidateColumn(src any, fields []string) (res bool) {
 	structValue := reflect.ValueOf(src).Elem() // 获取字段值
 	structType := reflect.TypeOf(src).Elem()   // 获取字段类型
 	for i := 0; i < structType.NumField(); i++ {
-		n := strings.ToLower(structType.Field(i).Name)
-		if _, ok := fieldMap[n]; ok && structValue.Field(i).IsZero() {
-			return
+		n := strings.ToLower(structType.Field(i).Tag.Get("validate"))
+		if _, ok := fieldMap[n]; !ok {
+			continue
+		}
+		if structValue.Field(i).IsZero() {
+			return true
 		}
 	}
-	return true
+	return false
 }

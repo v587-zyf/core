@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"core/log"
+	"crypto/tls"
 	"encoding/json"
 	"go.uber.org/zap"
 	"io"
@@ -92,12 +93,46 @@ func PostJson(urls string, data []byte) ([]byte, error) {
 		urls = "http://" + urls
 	}
 
+	var client = http.DefaultClient
+
 	req, err := http.NewRequest("POST", urls, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	var client = http.DefaultClient
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+func PostJsonDiyClient(urls string, data []byte, caAddr string) ([]byte, error) {
+	if !strings.Contains(urls, "http") {
+		urls = "https://" + urls
+	}
+
+	// 创建一个新的http.Client实例
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // 跳过证书验证
+			},
+		},
+	}
+
+	req, err := http.NewRequest("POST", urls, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
 	response, err := client.Do(req)
 	if err != nil {
 		return nil, err
