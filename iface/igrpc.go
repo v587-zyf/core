@@ -1,6 +1,7 @@
 package iface
 
 import (
+	"comm/proto/out/server"
 	"context"
 	"google.golang.org/grpc"
 )
@@ -17,4 +18,11 @@ type IGrpcStream interface {
 	GetID() uint64
 	GetStream() *grpc.ClientStream
 	GetCtx() context.Context
+}
+
+type IGrpcMsg interface {
+	Init(ctx context.Context, option ...any) (err error)
+	SendToMsg(msg *server.MessageData)
+	Send2User(userID uint64, msgID int32, msg IProtoMessage)
+	SendErr2User(userID uint64, err error)
 }

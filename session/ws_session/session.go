@@ -162,6 +162,49 @@ func (s *Session) AddReconnectTimes() {
 	s.reconnectTimes++
 }
 
+func (s *Session) readPump() {
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 1<<10)
+			runtime.Stack(buf, true)
+			if err, ok := r.(error); ok {
+				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+					zap.String("err", err.Error()), zap.ByteString("core", buf))
+			} else if err, ok := r.(string); ok {
+				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+					zap.String("err", err), zap.ByteString("core", buf))
+			} else {
+				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
+					zap.Reflect("err", err), zap.ByteString("core", buf))
+			}
+		}
+	}()
+
+	s.hooks.ExecuteStart(s)
+
+LOOP:
+	for {
+		_, message, err := s.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway,
+				websocket.CloseNoStatusReceived,
+				websocket.CloseAbnormalClosure) {
+				log.Info("ws_server read err", zap.Error(err))
+			}
+			break LOOP
+		}
+		if message != nil && len(message) > 0 {
+			//log.Debug("1------------------recv msg")
+			dataCopy := make([]byte, len(message))
+			copy(dataCopy, message)
+			s.inChan <- dataCopy
+		}
+	}
+
+	s.cancel()
+}
+
 func (s *Session) IOPump() {
 	defer func() {
 		if r := recover(); r != nil {
@@ -209,49 +252,6 @@ LOOP:
 	s.hooks.ExecuteStop(s)
 
 	s.Close()
-}
-
-func (s *Session) readPump() {
-	defer func() {
-		if r := recover(); r != nil {
-			buf := make([]byte, 1<<10)
-			runtime.Stack(buf, true)
-			if err, ok := r.(error); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err.Error()), zap.ByteString("core", buf))
-			} else if err, ok := r.(string); ok {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.String("err", err), zap.ByteString("core", buf))
-			} else {
-				log.Error("core dump", zap.Uint64("sessID", s.GetID()),
-					zap.Reflect("err", err), zap.ByteString("core", buf))
-			}
-		}
-	}()
-
-	s.hooks.ExecuteStart(s)
-
-LOOP:
-	for {
-		_, message, err := s.conn.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err,
-				websocket.CloseGoingAway,
-				websocket.CloseNoStatusReceived,
-				websocket.CloseAbnormalClosure) {
-				log.Info("ws_server read err", zap.Error(err))
-			}
-			break LOOP
-		}
-		if message != nil && len(message) > 0 {
-			//log.Debug("1------------------recv msg")
-			dataCopy := make([]byte, len(message))
-			copy(dataCopy, message)
-			s.inChan <- dataCopy
-		}
-	}
-
-	s.cancel()
 }
 
 //func (s *Session) parsePump() {

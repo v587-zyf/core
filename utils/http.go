@@ -90,7 +90,7 @@ func PostForm(urls string, data url.Values) ([]byte, error) {
 
 func PostJson(urls string, data []byte) ([]byte, error) {
 	if !strings.Contains(urls, "http") {
-		urls = "http://" + urls
+		urls = "https://" + urls
 	}
 
 	var client = http.DefaultClient

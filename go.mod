@@ -4,6 +4,7 @@ go 1.22.4
 
 require (
 	github.com/goccy/go-json v0.10.3
+	github.com/gofiber/cors v0.2.2
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/golang/protobuf v1.5.4
 	github.com/gorilla/websocket v1.5.3
@@ -24,8 +25,11 @@ require (
 	github.com/go-playground/locales v0.13.0 // indirect
 	github.com/go-playground/universal-translator v0.17.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
+	github.com/gofiber/fiber v1.13.3 // indirect
+	github.com/gofiber/utils v0.0.9 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/gorilla/schema v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jonboulle/clockwork v0.4.0 // indirect
 	github.com/klauspost/compress v1.17.2 // indirect
