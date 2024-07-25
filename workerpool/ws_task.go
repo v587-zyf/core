@@ -1,6 +1,7 @@
 package workerpool
 
 import (
+	pb "comm/proto/out/client"
 	"core/iface"
 	"core/log"
 	"core/session/ws_session"
@@ -23,7 +24,7 @@ type WsTask struct {
 
 func (t *WsTask) Do() {
 	if t.Func == nil {
-		log.Warn("ws task func is nil", zap.Uint16("msgID", t.Data.(*iface.MessageFrame).MsgID))
+		log.Warn("ws task func is nil", zap.Uint16("msgID", t.Data.(*iface.MessageFrame).MsgID), zap.String("msgName", pb.GetMsgName(t.Data.(*iface.MessageFrame).MsgID)))
 		return
 	}
 	t.Func(t.Session, t.Data)
